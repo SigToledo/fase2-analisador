@@ -1,6 +1,6 @@
 # Projeto Fase 2 – Analisador Léxico e Sintático
 
-Este repositório contém o projeto desenvolvido para a disciplina **Linguagens Formais e Compiladores (PUCPR – 2024/1)**, orientada pelo professor Frank Coelho de Alcântara.
+Este repositório contém o projeto desenvolvido para a disciplina **Linguagens Formais e Compiladores (PUCPR – 2025/1)**, orientada pelo professor Frank Coelho de Alcântara.
 
 ---
 
