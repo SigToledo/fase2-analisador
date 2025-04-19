@@ -1,1 +1,8 @@
-( for i = 1 to 3 do ( 5 MEM ) ) )
+( for i = 1 to 3 do ( 5 MEM ) )                     # Válido
+( for x = 0 to 2 do ( ( x x + ) MEM ) )             # Válido
+( for a = 1 to 1 do ( ( 3 3 + ) ( 2 2 + ) * MEM ) ) # Válido
+( for j = 1 to 4 do ( j RES ) )                     # Válido
+( for = 1 to 3 do ( 1 MEM ) )                       # Inválido
+( for i = to 3 do ( 1 MEM ) )                       # Inválido
+( for i = 1 to do ( 1 MEM ) )                       # Inválido
+( for i = 1 to 3 ( 1 MEM ) )                        # Inválido
