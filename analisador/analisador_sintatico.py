@@ -26,7 +26,6 @@ def parse_expr(tokens, pos):
     if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_ABRE':
         pos += 1  # Consome PAR_ABRE
 
-        # Casos simples de comando único (MEM), (NUM MEM), (NUM RES)
         if pos < len(tokens):
             # (NUM MEM)
             if (pos + 1 < len(tokens) and
@@ -41,23 +40,22 @@ def parse_expr(tokens, pos):
                 pos += 2
 
             # (MEM)
-            elif tokens[pos]['classe'] == 'MEM':
+            elif tokens[pos]['classe'] == 'MEM' and (pos + 1 < len(tokens) and tokens[pos + 1]['classe'] == 'PAR_FECHA'):
                 pos += 1
 
-            # (NUM NUM OP) ou (MEM NUM OP) ou (RES NUM OP) ou aninhado (expr expr OP)
+            # (NUM NUM OP), (MEM NUM OP), (RES NUM OP), etc.
             elif (pos + 2 < len(tokens) and
                   tokens[pos]['classe'] in ['NUM', 'MEM', 'RES', 'PAR_ABRE'] and
                   tokens[pos + 1]['classe'] in ['NUM', 'MEM', 'RES', 'PAR_ABRE'] and
                   tokens[pos + 2]['classe'] == 'OP'):
-                # Checa se são expressões ou tokens
-                for _ in range(2):
+                for i in range(2):
                     if tokens[pos]['classe'] == 'PAR_ABRE':
                         pos = parse_expr(tokens, pos)
                     else:
                         pos += 1
-                pos += 1  # Consome o OP
+                pos += 1  # Consome o operador
 
-            # (expr) recursivo aninhado
+            # Subexpressão única ( (expr) )
             elif tokens[pos]['classe'] == 'PAR_ABRE':
                 pos = parse_expr(tokens, pos)
 
