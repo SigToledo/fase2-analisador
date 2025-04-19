@@ -22,48 +22,49 @@ def analisar_sintaticamente(tokens):
 def parse_expr(tokens, pos):
     """
     Expressão válida: ( expr ) ou comandos como (NUM NUM OP), (NUM MEM), (NUM RES), (MEM), (RES NUM OP)
+    Também suporta expressões aninhadas como ((EXPR) (EXPR) OP)
     """
     if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_ABRE':
         pos += 1  # Consome PAR_ABRE
 
+        # Verifica expressões curtas como (NUM MEM), (NUM RES), (MEM)
+        if (pos + 1 < len(tokens) and
+            tokens[pos]['classe'] == 'NUM' and tokens[pos + 1]['classe'] in ['MEM', 'RES'] and
+            tokens[pos + 2]['classe'] == 'PAR_FECHA'):
+            return pos + 3
+
+        if (pos < len(tokens) and
+            tokens[pos]['classe'] == 'MEM' and
+            tokens[pos + 1]['classe'] == 'PAR_FECHA'):
+            return pos + 2
+
+        # Tenta consumir primeiro operando (pode ser expressão ou token simples)
         if pos < len(tokens):
-            # (NUM MEM)
-            if (pos + 1 < len(tokens) and
-                tokens[pos]['classe'] == 'NUM' and
-                tokens[pos + 1]['classe'] == 'MEM'):
-                pos += 2
-
-            # (NUM RES)
-            elif (pos + 1 < len(tokens) and
-                  tokens[pos]['classe'] == 'NUM' and
-                  tokens[pos + 1]['classe'] == 'RES'):
-                pos += 2
-
-            # (MEM)
-            elif tokens[pos]['classe'] == 'MEM' and (pos + 1 < len(tokens) and tokens[pos + 1]['classe'] == 'PAR_FECHA'):
-                pos += 1
-
-            # (NUM NUM OP), (MEM NUM OP), (RES NUM OP), etc.
-            elif (pos + 2 < len(tokens) and
-                  tokens[pos]['classe'] in ['NUM', 'MEM', 'RES', 'PAR_ABRE'] and
-                  tokens[pos + 1]['classe'] in ['NUM', 'MEM', 'RES', 'PAR_ABRE'] and
-                  tokens[pos + 2]['classe'] == 'OP'):
-                for i in range(2):
-                    if tokens[pos]['classe'] == 'PAR_ABRE':
-                        pos = parse_expr(tokens, pos)
-                    else:
-                        pos += 1
-                pos += 1  # Consome o operador
-
-            # Subexpressão única ( (expr) )
-            elif tokens[pos]['classe'] == 'PAR_ABRE':
+            if tokens[pos]['classe'] == 'PAR_ABRE':
                 pos = parse_expr(tokens, pos)
-
+            elif tokens[pos]['classe'] in ['NUM', 'MEM', 'RES']:
+                pos += 1
             else:
-                raise SyntaxError(f"Expressão inesperada após '(': {tokens[pos]['valor']}")
+                raise SyntaxError(f"Operando 1 inválido: {tokens[pos]['valor']}")
 
+        # Tenta consumir segundo operando (também pode ser expressão ou token simples)
+        if pos < len(tokens):
+            if tokens[pos]['classe'] == 'PAR_ABRE':
+                pos = parse_expr(tokens, pos)
+            elif tokens[pos]['classe'] in ['NUM', 'MEM', 'RES']:
+                pos += 1
+            else:
+                raise SyntaxError(f"Operando 2 inválido: {tokens[pos]['valor']}")
+
+        # Tenta consumir operador
+        if pos < len(tokens) and tokens[pos]['classe'] == 'OP':
+            pos += 1
+        else:
+            raise SyntaxError("Esperado operador após dois operandos")
+
+        # Verifica PAR_FECHA
         if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_FECHA':
-            return pos + 1  # Consome PAR_FECHA
+            return pos + 1
         else:
             raise SyntaxError("Esperado PAR_FECHA")
 

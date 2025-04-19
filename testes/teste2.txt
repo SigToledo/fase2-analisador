@@ -1,0 +1,11 @@
+( 3 4 + )
+( 5.5 MEM )
+( MEM 3 + )
+( 2 RES )
+( 3 2 ^ )
+( ( 1 2 + ) 4 * )
+( 5.5.5 + )           # inválido - número mal formado
+( 3 + )               # inválido - operador sem dois operandos
+( 1 2 )               # inválido - dois operandos sem operador
+( MEM MEM + )         # válido
+( ( 3 4 + ) ( 1 1 + ) * )  # válido com aninhamento
