@@ -7,6 +7,7 @@ def analisar_sintaticamente(tokens):
     """
     Função principal que inicia a análise sintática com base na gramática esperada.
     Retorna True se a expressão for sintaticamente correta, ou False com mensagem de erro.
+    A análise considera expressões aritméticas, comandos com memória, e estruturas de repetição 'for'.
     """
     try:
         pos = 0
@@ -20,74 +21,84 @@ def analisar_sintaticamente(tokens):
         return False
 
 def parse_expr(tokens, pos):
-    """
-    Expressões válidas:
-    - ( NUM NUM OP )
-    - ( NUM MEM ), ( NUM RES ), ( MEM )
-    - ( ( EXPR ) ( EXPR ) OP )
-    - ( for ID = NUM to NUM do ( EXPR ) )
-    """
     if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_ABRE':
         pos += 1  # Consome PAR_ABRE
 
-        # FOR loop: ( for i = 1 to 3 do ( expr ) )
-        if (pos + 8 < len(tokens) and
-            tokens[pos]['valor'] == 'for' and
+        if is_for_loop(tokens, pos):
+            return parse_for_loop(tokens, pos)
+
+        if is_short_expr(tokens, pos):
+            return parse_short_expr(tokens, pos)
+
+        return parse_binary_expr(tokens, pos)
+
+    raise SyntaxError("Expressão mal formada ou inesperada")
+
+def is_for_loop(tokens, pos):
+    return (pos + 6 < len(tokens) and
+            tokens[pos]['classe'] == 'FOR' and
             tokens[pos + 1]['classe'] == 'ID' and
-            tokens[pos + 2]['valor'] == '=' and
+            tokens[pos + 2]['classe'] == 'OP' and tokens[pos + 2]['valor'] == '=' and
             tokens[pos + 3]['classe'] == 'NUM' and
-            tokens[pos + 4]['valor'] == 'to' and
+            tokens[pos + 4]['classe'] == 'TO' and
             tokens[pos + 5]['classe'] == 'NUM' and
-            tokens[pos + 6]['valor'] == 'do' and
-            tokens[pos + 7]['classe'] == 'PAR_ABRE'):
+            tokens[pos + 6]['classe'] == 'DO')
 
-            pos = pos + 7  # pula até o '('
-            pos = parse_expr(tokens, pos)  # analisa bloco interno
-            if tokens[pos]['classe'] == 'PAR_FECHA':
-                pos += 1
-                if tokens[pos]['classe'] == 'PAR_FECHA':
-                    return pos + 1
-                else:
-                    raise SyntaxError("Esperado ')' final após bloco do for")
-            else:
-                raise SyntaxError("Esperado ')' para fechar bloco do for")
+def parse_for_loop(tokens, pos):
+    pos += 7
 
-        # Expressões curtas: (NUM MEM), (NUM RES), (MEM)
-        if (pos + 1 < len(tokens) and
-            tokens[pos]['classe'] == 'NUM' and tokens[pos + 1]['classe'] in ['MEM', 'RES'] and
-            tokens[pos + 2]['classe'] == 'PAR_FECHA'):
-            return pos + 3
+    if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_ABRE':
+        pos = parse_expr(tokens, pos)
+    else:
+        raise SyntaxError("Esperado '(' antes da expressão do corpo do for")
 
-        if (pos < len(tokens) and
-            tokens[pos]['classe'] == 'MEM' and
-            tokens[pos + 1]['classe'] == 'PAR_FECHA'):
-            return pos + 2
+    if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_FECHA':
+        pos += 1
+    else:
+        raise SyntaxError("Esperado ')' para fechar bloco do for")
 
-        # Dois operandos + operador
+    if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_FECHA':
+        pos += 1
+    else:
+        raise SyntaxError("Esperado ')' final do comando for")
+
+    return pos
+
+def is_short_expr(tokens, pos):
+    return ((pos + 2 < len(tokens) and
+             tokens[pos]['classe'] in ['NUM', 'ID'] and tokens[pos + 1]['classe'] in ['MEM', 'RES'] and
+             tokens[pos + 2]['classe'] == 'PAR_FECHA') or
+            (pos + 1 < len(tokens) and
+             tokens[pos]['classe'] in ['MEM', 'ID'] and
+             tokens[pos + 1]['classe'] == 'PAR_FECHA'))
+
+def parse_short_expr(tokens, pos):
+    if tokens[pos + 1]['classe'] in ['MEM', 'RES']:
+        return pos + 3
+    return pos + 2
+
+def parse_binary_expr(tokens, pos):
+    expr_stack = []
+
+    for i in range(2):
         if pos < len(tokens):
             if tokens[pos]['classe'] == 'PAR_ABRE':
                 pos = parse_expr(tokens, pos)
-            elif tokens[pos]['classe'] in ['NUM', 'MEM', 'RES']:
+                expr_stack.append('EXPR')
+            elif tokens[pos]['classe'] in ['NUM', 'MEM', 'RES', 'ID']:
+                expr_stack.append(tokens[pos]['classe'])
                 pos += 1
             else:
-                raise SyntaxError(f"Operando 1 inválido: {tokens[pos]['valor']}")
-
-        if pos < len(tokens):
-            if tokens[pos]['classe'] == 'PAR_ABRE':
-                pos = parse_expr(tokens, pos)
-            elif tokens[pos]['classe'] in ['NUM', 'MEM', 'RES']:
-                pos += 1
-            else:
-                raise SyntaxError(f"Operando 2 inválido: {tokens[pos]['valor']}")
-
-        if pos < len(tokens) and tokens[pos]['classe'] == 'OP':
-            pos += 1
+                raise SyntaxError(f"Operando {i + 1} inválido: {tokens[pos]['valor']}")
         else:
-            raise SyntaxError("Esperado operador após dois operandos")
+            raise SyntaxError(f"Esperado operando {i + 1}, mas a expressão terminou")
 
-        if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_FECHA':
-            return pos + 1
-        else:
-            raise SyntaxError("Esperado PAR_FECHA")
+    if pos < len(tokens) and tokens[pos]['classe'] == 'OP':
+        pos += 1
+    else:
+        raise SyntaxError("Esperado operador após dois operandos")
 
-    raise SyntaxError(f"Expressão inválida a partir do token {tokens[pos]['valor']} (classe {tokens[pos]['classe']})")
+    if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_FECHA':
+        return pos + 1
+    else:
+        raise SyntaxError("Esperado PAR_FECHA")

@@ -4,7 +4,7 @@ from analisador.analisador_lexico import analisar_linha
 from analisador.analisador_sintatico import analisar_sintaticamente
 
 # Caminho do arquivo de teste
-caminho = "testes/teste2.txt"
+caminho = "testes/teste3.txt"
 
 # Leitura do arquivo linha a linha
 with open(caminho, 'r') as arquivo:
