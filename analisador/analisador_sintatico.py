@@ -21,21 +21,52 @@ def analisar_sintaticamente(tokens):
 
 def parse_expr(tokens, pos):
     """
-    Expressão válida: ( expr )  ou  NUM NUM OP  ou  RES NUM OP  etc.
+    Expressão válida: ( expr ) ou comandos como (NUM NUM OP), (NUM MEM), (NUM RES), (MEM), (RES NUM OP)
     """
     if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_ABRE':
-        pos += 1
-        pos = parse_expr(tokens, pos)
-        if tokens[pos]['classe'] == 'PAR_FECHA':
-            return pos + 1
+        pos += 1  # Consome PAR_ABRE
+
+        # Casos simples de comando único (MEM), (NUM MEM), (NUM RES)
+        if pos < len(tokens):
+            # (NUM MEM)
+            if (pos + 1 < len(tokens) and
+                tokens[pos]['classe'] == 'NUM' and
+                tokens[pos + 1]['classe'] == 'MEM'):
+                pos += 2
+
+            # (NUM RES)
+            elif (pos + 1 < len(tokens) and
+                  tokens[pos]['classe'] == 'NUM' and
+                  tokens[pos + 1]['classe'] == 'RES'):
+                pos += 2
+
+            # (MEM)
+            elif tokens[pos]['classe'] == 'MEM':
+                pos += 1
+
+            # (NUM NUM OP) ou (MEM NUM OP) ou (RES NUM OP) ou aninhado (expr expr OP)
+            elif (pos + 2 < len(tokens) and
+                  tokens[pos]['classe'] in ['NUM', 'MEM', 'RES', 'PAR_ABRE'] and
+                  tokens[pos + 1]['classe'] in ['NUM', 'MEM', 'RES', 'PAR_ABRE'] and
+                  tokens[pos + 2]['classe'] == 'OP'):
+                # Checa se são expressões ou tokens
+                for _ in range(2):
+                    if tokens[pos]['classe'] == 'PAR_ABRE':
+                        pos = parse_expr(tokens, pos)
+                    else:
+                        pos += 1
+                pos += 1  # Consome o OP
+
+            # (expr) recursivo aninhado
+            elif tokens[pos]['classe'] == 'PAR_ABRE':
+                pos = parse_expr(tokens, pos)
+
+            else:
+                raise SyntaxError(f"Expressão inesperada após '(': {tokens[pos]['valor']}")
+
+        if pos < len(tokens) and tokens[pos]['classe'] == 'PAR_FECHA':
+            return pos + 1  # Consome PAR_FECHA
         else:
             raise SyntaxError("Esperado PAR_FECHA")
-
-    elif pos + 2 < len(tokens):
-        # Padrões como NUM NUM OP ou MEM NUM OP etc.
-        if tokens[pos]['classe'] in ['NUM', 'MEM', 'RES'] and \
-           tokens[pos + 1]['classe'] in ['NUM', 'MEM', 'RES'] and \
-           tokens[pos + 2]['classe'] == 'OP':
-            return pos + 3
 
     raise SyntaxError(f"Expressão inválida a partir do token {tokens[pos]['valor']} (classe {tokens[pos]['classe']})")
